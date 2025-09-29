@@ -1,3 +1,9 @@
+/* 
+Small custom classes layered on top of Bootstrap’s grid/utilities.
+In _Layout.cshtml, Bootstrap CSS loads first and site.css loads after, so rules
+here can override or extend Bootstrap as needed via the normal CSS cascade.
+*/
+
 html {
   font-size: 14px;
 }
@@ -28,4 +34,14 @@ body {
 
 .form-floating > .form-control-plaintext:focus::placeholder, .form-floating > .form-control:focus::placeholder {
   text-align: start;
+}
+
+.chat-card {
+    max-width: 720px;
+}
+
+/* Scrollable message list area */
+.messages-list {
+    max-height: 50vh;
+    overflow: auto;
 }
