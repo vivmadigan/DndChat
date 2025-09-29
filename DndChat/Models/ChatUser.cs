@@ -1,9 +1,17 @@
-﻿namespace DndChat.Models
+﻿using Microsoft.AspNetCore.Identity;
+using System.ComponentModel.DataAnnotations;
+
+namespace DndChat.Models
 {
-    public class ChatUser
+    public class ChatUser : IdentityUser
     {
-        public string Id { get; set; } = Guid.NewGuid().ToString();
-        public string Username { get; set; }
-        public string ConnectionId { get; set; }
+
+        [ProtectedPersonalData]
+        public string? FirstName { get; set; }
+        [ProtectedPersonalData]
+        public string? LastName { get; set; }
+
+        public string? DisplayName { get; set; }
+
     }
 }
