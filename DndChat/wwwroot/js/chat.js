@@ -1,73 +1,113 @@
-﻿// chat.js
+﻿// Immediately-invoked module to avoid leaking variables to global scope
 (() => {
+
+    // Grab auth + UI state that Razor put on the page
     const root = document.getElementById('root');
     const joined = (root?.dataset.joined || '').toLowerCase() === 'true';
     const username = root?.dataset.username || '';
 
+    // Cache DOM elements we’ll use
     const messages = document.getElementById('messagesList');
     const input = document.getElementById('messageInput');
     const sendBtn = document.getElementById('sendBtn');
     const status = document.getElementById('status');
 
-    // prevent early clicks until connected
+    // Disable input until SignalR has connected
     input.disabled = true;
     sendBtn.disabled = true;
 
+    // If the user isn’t authenticated, don’t start SignalR
     if (!joined || username.length < 3) {
         console.log('Not authenticated; waiting.');
         return;
     }
 
-    const conn = new signalR.HubConnectionBuilder()
-        .withUrl('/chathub')
-        .withAutomaticReconnect()
-        .build();
-
-    conn.on('ReceiveMessage', (u, m) => {
-        const li = document.createElement('li');
-        li.className = 'list-group-item';
-        li.textContent = `${u}: ${m}`;
-        messages.appendChild(li);
-        messages.scrollTop = messages.scrollHeight;
-    });
-
-    // Reconnect UX
-    conn.onreconnecting(() => {
-        status.innerHTML = `<div class="alert alert-warning py-2">Reconnecting…</div>`;
-        sendBtn.disabled = true; input.disabled = true;
-    });
-    conn.onreconnected(() => {
-        status.innerHTML = `<div class="alert alert-success py-2">Connected as <strong>${username}</strong></div>`;
-        sendBtn.disabled = false; input.disabled = false;
-    });
-    conn.onclose(err => {
-        status.innerHTML = `<div class="alert alert-danger py-2">Connection closed${err ? ': ' + err : ''}</div>`;
-        sendBtn.disabled = true; input.disabled = true;
-    });
-
-    conn.start().then(() => {
-        input.disabled = false; sendBtn.disabled = false;
-        status.innerHTML = `<div class="alert alert-success py-2">Connected as <strong>${username}</strong></div>`;
-        console.log('SignalR connected');
-    }).catch(err => {
-        status.innerHTML = `<div class="alert alert-danger">Connection failed: ${err}</div>`;
-        console.error('SignalR connect error', err);
-    });
-
-    sendBtn.addEventListener('click', async () => {
-        const text = input.value.trim();
-        if (!text) return;
-        input.value = '';
+    // Ask the server (cookie-protected) to mint a short-lived JWT we can use for SignalR/API
+    async function getJwt() {
         try {
-            await conn.invoke('SendMessage', text); // one arg ✔
+            const res = await fetch('/api/auth/token', {
+                method: 'POST',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            });
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            const { accessToken } = await res.json();
+            return accessToken;
         } catch (err) {
-            status.innerHTML = `<div class="alert alert-warning">Send failed: ${err}</div>`;
-            console.error('Send failed', err);
+            console.warn('JWT fetch failed, falling back to cookie auth', err);
+            return null;
         }
-    });
+    }
 
-    // Enter to send
-    input.addEventListener('keydown', e => {
-        if (e.key === 'Enter') { sendBtn.click(); e.preventDefault(); }
-    });
+    // Bootstrap SignalR using JWT if available; otherwise fall back to cookie auth
+    (async () => {
+        const token = await getJwt();
+
+        // TEMP: debug — show the raw token (remove in production)
+        console.log('JWT:', token);
+
+        // Build the SignalR connection, passing the JWT via accessTokenFactory when we have one
+        let builder = new signalR.HubConnectionBuilder();
+        if (token) {
+            builder = builder.withUrl('/chathub', {
+                accessTokenFactory: () => token
+            });
+        } else {
+            builder = builder.withUrl('/chathub');
+        }
+
+        // Turn on automatic reconnects and create the connection instance
+        const conn = builder.withAutomaticReconnect().build();
+
+        // When a message arrives, render it in the list
+        conn.on('ReceiveMessage', (u, m) => {
+            const li = document.createElement('li');
+            li.className = 'list-group-item';
+            li.textContent = `${u}: ${m}`;
+            messages.appendChild(li);
+            messages.scrollTop = messages.scrollHeight;
+        });
+
+        // Show reconnecting/connected/closed status and lock inputs appropriately
+        conn.onreconnecting(() => {
+            status.innerHTML = `<div class="alert alert-warning py-2">Reconnecting…</div>`;
+            sendBtn.disabled = true; input.disabled = true;
+        });
+        conn.onreconnected(() => {
+            status.innerHTML = `<div class="alert alert-success py-2">Connected as <strong>${username}</strong></div>`;
+            sendBtn.disabled = false; input.disabled = false;
+        });
+        conn.onclose(err => {
+            status.innerHTML = `<div class="alert alert-danger py-2">Connection closed${err ? ': ' + err : ''}</div>`;
+            sendBtn.disabled = true; input.disabled = true;
+        });
+
+        // Start the connection, then enable inputs
+        try {
+            await conn.start();
+            input.disabled = false; sendBtn.disabled = false;
+            status.innerHTML = `<div class="alert alert-success py-2">Connected as <strong>${username}</strong></div>`;
+        } catch (err) {
+            status.innerHTML = `<div class="alert alert-danger">Connection failed: ${err}</div>`;
+            console.error('SignalR connect error', err);
+            return;
+        }
+
+        // Send a chat message to the hub
+        sendBtn.addEventListener('click', async () => {
+            const text = input.value.trim();
+            if (!text) return;
+            input.value = '';
+            try {
+                await conn.invoke('SendMessage', text);
+            } catch (err) {
+                status.innerHTML = `<div class="alert alert-warning">Send failed: ${err}</div>`;
+                console.error('Send failed', err);
+            }
+        });
+
+        // Allow pressing Enter to send
+        input.addEventListener('keydown', e => {
+            if (e.key === 'Enter') { sendBtn.click(); e.preventDefault(); }
+        });
+    })();
 })();
