@@ -13,6 +13,7 @@ namespace DndChat.Controllers
         }
 
         [HttpPost]
+        // To protect agains CSRF attacks
         [ValidateAntiForgeryToken]
         public IActionResult Index(JoinViewModel model)
         {             

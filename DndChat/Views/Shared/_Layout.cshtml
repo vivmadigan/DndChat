@@ -34,6 +34,7 @@
                             </li>
                             <li class="nav-item">
                                 <form asp-controller="Account" asp-action="Logout" method="post" class="d-inline">
+                                    @*To protect agains CSRF attacks*@
                                     @Html.AntiForgeryToken()
                                     <button type="submit" class="btn btn-outline-secondary btn-sm">Logout</button>
                                 </form>
