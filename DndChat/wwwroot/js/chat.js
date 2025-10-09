@@ -49,23 +49,27 @@
         console.log('JWT:', token);
 
         // Build the SignalR connection, passing the JWT via accessTokenFactory when we have one
-        let builder = new signalR.HubConnectionBuilder();
-        if (token) {
-            builder = builder.withUrl('/chathub', {
-                accessTokenFactory: () => token
-            });
-        } else {
-            builder = builder.withUrl('/chathub');
-        }
+        const builder = new signalR.HubConnectionBuilder();
+        const configured = token
+            ? builder.withUrl('/chathub', { accessTokenFactory: () => token })
+            : builder.withUrl('/chathub');
 
         // Turn on automatic reconnects and create the connection instance
         const conn = builder.withAutomaticReconnect().build();
 
-        // When a message arrives, render it in the list
-        conn.on('ReceiveMessage', (u, m) => {
+        conn.on('ReceiveMessage', (user, text) => {
             const li = document.createElement('li');
             li.className = 'list-group-item';
-            li.textContent = `${u}: ${m}`;
+            li.textContent = `${user}: ${text}`;
+            messages.appendChild(li);
+            messages.scrollTop = messages.scrollHeight;
+        });
+
+        // When a message arrives, render it in the list
+        conn.on('SystemNotice', (roomId, text) => {
+            const li = document.createElement('li');
+            li.className = 'list-group-item text-muted fst-italic';
+            li.textContent = text; // safe (no HTML)
             messages.appendChild(li);
             messages.scrollTop = messages.scrollHeight;
         });

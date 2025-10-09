@@ -10,6 +10,9 @@ namespace DndChat.Hubs
     [Authorize(AuthenticationSchemes = "Bearer,Identity.Application")]
     public class ChatHub : Hub
     {
+        // TEMP a constant group name for your global chat
+        // When private chats are added, switch to database-driven groups
+        public const string GlobalGroup = "global";
         // logging so we can see connects/disconnects in the console
         private readonly ILogger<ChatHub> _log;
         public ChatHub(ILogger<ChatHub> log) => _log = log;
@@ -18,13 +21,27 @@ namespace DndChat.Hubs
         // Context.User is the authenticated principal built from the cookie or JWT.
         public override async Task OnConnectedAsync()
         {
-            _log.LogInformation("SR connected: {User} ({Conn})", Context.User?.Identity?.Name, Context.ConnectionId);
+            // Get the authenticated username (from ClaimTypes.Name)
+            var userName = Context.User?.Identity?.Name ?? "unknown";
+            // Log it for information purposes
+            _log.LogInformation("SR connected: {User} ({Conn})", userName, Context.ConnectionId);
+            // Add everyone to the global group
+            await Groups.AddToGroupAsync(Context.ConnectionId, GlobalGroup);
+            // Send a notice to everyone in the group that someone joined
+            await Clients.Group(GlobalGroup).SendAsync("SystemNotice", GlobalGroup, $"{userName} joined chat");
+
             await base.OnConnectedAsync();
         }
 
         public override async Task OnDisconnectedAsync(Exception? ex)
         {
-            _log.LogInformation(ex, "SR disconnected: {User} ({Conn})", Context.User?.Identity?.Name, Context.ConnectionId);
+            
+            var userName = Context.User?.Identity?.Name ?? "unknown";
+
+            _log.LogInformation(ex, "SR disconnected: {User} ({Conn})", userName, Context.ConnectionId);
+
+            await Clients.Group(GlobalGroup).SendAsync("SystemNotice", GlobalGroup, $"{userName} left chat");
+
             await base.OnDisconnectedAsync(ex);
         }
         // This is a hub method clients can call.
@@ -36,7 +53,7 @@ namespace DndChat.Hubs
             if (string.IsNullOrWhiteSpace(message))
                 throw new HubException("Message cannot be empty.");
             _log.LogInformation("Chat: {User} -> {Msg}", userName, message);
-            await Clients.All.SendAsync("ReceiveMessage", userName, message.Trim());
+            await Clients.Group(GlobalGroup).SendAsync("ReceiveMessage", userName, message.Trim());
         }
     }
 }

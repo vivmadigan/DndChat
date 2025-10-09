@@ -86,6 +86,7 @@ builder.Services.AddSignalR(options => { options.EnableDetailedErrors = true; })
 
 builder.Services.AddAuthorization();
 
+// Simple console logging
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
 
