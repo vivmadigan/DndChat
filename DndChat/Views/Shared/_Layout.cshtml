@@ -34,7 +34,7 @@
                             </li>
                             <li class="nav-item">
                                 <form asp-controller="Account" asp-action="Logout" method="post" class="d-inline">
-                                    @*To protect agains CSRF attacks*@
+                                    @* To protect against CSRF attacks *@
                                     @Html.AntiForgeryToken()
                                     <button type="submit" class="btn btn-outline-secondary btn-sm">Logout</button>
                                 </form>
@@ -66,6 +66,8 @@
         </div>
     </footer>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- DOMPurify: used in chat.js to sanitize dynamic strings before innerHTML -->
+    <script src="~/lib/dompurify/dist/purify.min.js" asp-append-version="true"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
     @await RenderSectionAsync("Scripts", required: false)
 </body>

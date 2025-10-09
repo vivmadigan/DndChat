@@ -11,6 +11,15 @@
         "dist/browser/signalr.min.js",
         "dist/browser/signalr.min.js.map"
       ]
+    },
+    {
+      "provider": "jsdelivr",
+      "library": "dompurify@latest",
+      "destination": "wwwroot/lib/dompurify/",
+      "files": [
+        "dist/purify.min.js.map",
+        "dist/purify.min.js"
+      ]
     }
   ]
 }
