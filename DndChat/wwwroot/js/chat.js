@@ -1,6 +1,9 @@
 ﻿// Immediately-invoked module to avoid leaking variables to global scope
 (() => {
-
+    // XSS protection but only needed when we use innerHTML.
+    // DOMPurify.sanitize(...) removes dangerous tags/attributes (e.g. <script>, onerror=, javascript: URLs)
+    // so we can safely insert user-controlled text into an HTML template.
+    const sanitizeForInnerHTML = (value) => DOMPurify.sanitize(String(value));
     // Grab auth + UI state that Razor put on the page
     const root = document.getElementById('root');
     const joined = (root?.dataset.joined || '').toLowerCase() === 'true';
@@ -69,25 +72,40 @@
 
         // Show reconnecting/connected/closed status and lock inputs appropriately
         conn.onreconnecting(() => {
+            // Static message so no sanitization needed
             status.innerHTML = `<div class="alert alert-warning py-2">Reconnecting…</div>`;
-            sendBtn.disabled = true; input.disabled = true;
+            sendBtn.disabled = true;
+            input.disabled = true;
         });
+
         conn.onreconnected(() => {
-            status.innerHTML = `<div class="alert alert-success py-2">Connected as <strong>${username}</strong></div>`;
-            sendBtn.disabled = false; input.disabled = false;
+            // DOMPurify: sanitize dynamic username before inserting via innerHTML
+            const safeUser = sanitizeForInnerHTML(username);
+            status.innerHTML = `<div class="alert alert-success py-2">Connected as <strong>${safeUser}</strong></div>`;
+            sendBtn.disabled = false;
+            input.disabled = false;
         });
+
         conn.onclose(err => {
-            status.innerHTML = `<div class="alert alert-danger py-2">Connection closed${err ? ': ' + err : ''}</div>`;
-            sendBtn.disabled = true; input.disabled = true;
+            // DOMPurify: err could be anything; sanitize before innerHTML
+            const safeErr = err ? `: ${sanitizeForInnerHTML(err)}` : '';
+            status.innerHTML = `<div class="alert alert-danger py-2">Connection closed${safeErr}</div>`;
+            sendBtn.disabled = true;
+            input.disabled = true;
         });
 
         // Start the connection, then enable inputs
         try {
             await conn.start();
-            input.disabled = false; sendBtn.disabled = false;
-            status.innerHTML = `<div class="alert alert-success py-2">Connected as <strong>${username}</strong></div>`;
+            input.disabled = false;
+            sendBtn.disabled = false;
+
+            // DOMPurify: sanitize dynamic username before innerHTML
+            const safeUser = sanitizeForInnerHTML(username);
+            status.innerHTML = `<div class="alert alert-success py-2">Connected as <strong>${safeUser}</strong></div>`;
         } catch (err) {
-            status.innerHTML = `<div class="alert alert-danger">Connection failed: ${err}</div>`;
+            // DOMPurify: sanitize error text before innerHTML
+            status.innerHTML = `<div class="alert alert-danger">Connection failed: ${sanitizeForInnerHTML(err)}</div>`;
             console.error('SignalR connect error', err);
             return;
         }
@@ -96,11 +114,13 @@
         sendBtn.addEventListener('click', async () => {
             const text = input.value.trim();
             if (!text) return;
+
             input.value = '';
             try {
                 await conn.invoke('SendMessage', text);
             } catch (err) {
-                status.innerHTML = `<div class="alert alert-warning">Send failed: ${err}</div>`;
+                // DOMPurify: sanitize error text before innerHTML
+                status.innerHTML = `<div class="alert alert-warning">Send failed: ${sanitizeForInnerHTML(err)}</div>`;
                 console.error('Send failed', err);
             }
         });

@@ -31,6 +31,7 @@ namespace DndChat.Hubs
         // It reads the authenticated user's name from Context.User and broadcasts to everyone.
         public async Task SendMessage(string message)
         {
+            // Authenticated username (comes from ClaimTypes.Name)
             var userName = Context.User?.Identity?.Name ?? "unknown";
             if (string.IsNullOrWhiteSpace(message))
                 throw new HubException("Message cannot be empty.");
