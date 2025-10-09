@@ -1,39 +1,55 @@
 # DndChat
 
-DndChat is a simple web app for Dungeons & Dragons players. The goal is to let players log in, meet in a main chat room, and create private rooms for their own campaigns.
+A lightweight real-time chat for Dungeons & Dragons groups. Players **register & sign in** with ASP.NET Core Identity. Once logged in, they join a **global chat** (SignalR). The chat shows lines when users send messages and when someone **logs in** or **logs out**.
 
-## Status
+---
 
-MVP in progress:
-- Join with a username to access a global chat
-- Real time messaging with SignalR
-- ASP.NET Core MVC project structure
+## How it works
 
-Planned next:
-- Proper login with ASP.NET Core Identity
-- Private chat rooms
-- Message history and basic moderation tools
+1. User **registers/signs in** (Identity).
+2. Opening the chat page starts a **SignalR** connection to `/chathub` (JWT if available, otherwise cookie).
+3. The server adds the connection to a **global** group and broadcasts a small **system notice** on connect/disconnect.
+4. Messages are sent via the hub and broadcast to all clients in the global group.  
+   _Security:_ chat lines use `textContent`; only status banners use `innerHTML` and are sanitized with **DOMPurify**.
 
-## Tech stack
+---
 
-- ASP.NET Core MVC
-- SignalR for real time communication (WebSockets with SSE and long polling fallback)
-- ASP.NET Core Identity (planned)
+## Features (current)
 
-## How it works (MVP)
+- Secure register/sign-in with **ASP.NET Core Identity**
+- **Global chat** with SignalR (auto WebSocket/SSE/long-poll fallback)
+- System messages for **login** / **logout**
+- Only **authenticated** users can send; messages display the user’s **username**
+- Client-side XSS hardening with **DOMPurify**
+- Basic server/hub **console logging**
 
-1. User opens `/Chat/Index`, enters a username with 3 or more characters, and submits the form.
-2. The server re-renders the same view with `Joined = true`.
-3. A small script (`wwwroot/js/chat.js`) starts a SignalR connection to `/chathub`.
-4. Messages are sent with `SendMessage(user, message)` and broadcast to all clients with `ReceiveMessage`.
+---
 
-Security note: messages are rendered with `textContent` on the client and Razor encoding on the server to avoid XSS.
+## Roadmap
+
+- **Private rooms** (GUID invite + membership checks)
+- **Message history** persisted to database (load last N on join)
+- Structured logging (e.g., NLog) and a few unit tests
+- Optional end-to-end **message encryption** (app-level)
+
+---
 
 ## Getting started
 
 ### Prerequisites
 - .NET 8 SDK
-- Visual Studio 2022 or `dotnet` CLI
+- Visual Studio 2022 (or `dotnet` CLI)
+
+### Configure (dev)
+- Ensure your SQL connection string `DefaultConnection` is set in `appsettings.Development.json`.
+- If you’re using JWT for the SignalR client, define:
+  ```json
+  "Jwt": {
+    "Issuer": "https://localhost:7240",
+    "Audience": "https://localhost:7240",
+    "SecretKey": "dev-only-very-long-random-string"
+  }
+
 
 ### Run
 
@@ -45,4 +61,5 @@ Using Visual Studio:
 Using CLI:
 ```bash
 dotnet restore
+dotnet ef database update 
 dotnet run
