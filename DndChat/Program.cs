@@ -2,6 +2,7 @@ using DndChat.Data;
 using DndChat.Hubs;
 using DndChat.Models;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -85,6 +86,7 @@ builder.Services.AddSignalR(options => { options.EnableDetailedErrors = true; })
 
 builder.Services.AddAuthorization();
 
+// Simple console logging
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
 

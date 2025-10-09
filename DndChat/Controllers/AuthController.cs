@@ -39,6 +39,7 @@ namespace DndChat.Controllers
             // Build the claims that will go into the JWT
             var claims = new List<Claim>
         {
+                // .Sub is subject, to uniquely identify the entity (usually the user) that the token is about
                 new(JwtRegisteredClaimNames.Sub, user.Id),
                 new(ClaimTypes.NameIdentifier, user.Id),
                 new(ClaimTypes.Name, user.UserName ?? "")
