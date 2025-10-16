@@ -1,8 +1,9 @@
 using DndChat.Data;
 using DndChat.Hubs;
 using DndChat.Models;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
+using DndChat.Services;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -78,6 +79,8 @@ builder.Services.AddAuthentication()
         };
     });
 
+builder.Services.AddScoped<IChatRoomService, ChatRoomService>();
+
 
 builder.Services.AddControllersWithViews();
 
@@ -117,5 +120,23 @@ app.MapControllerRoute(
     pattern: "{controller=Chat}/{action=Index}/{id?}")
     .WithStaticAssets();
 
+// Ensures there is a persistent 'Global' room if you want to store global history.
+using (var scope = app.Services.CreateScope())
+{
+    var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    dbContext.Database.Migrate();
 
+    if (!dbContext.ChatRooms.Any(room => room.Id == "global"))
+    {
+        dbContext.ChatRooms.Add(new ChatRoom
+        {
+            Id = "global",
+            JoinCode = "global",     // not a secret, just a stable code
+            OwnerUserId = "system",
+            ChatName = "Global",
+            CreatedUtc = DateTime.UtcNow
+        });
+        dbContext.SaveChanges();
+    }
+}
 app.Run();
