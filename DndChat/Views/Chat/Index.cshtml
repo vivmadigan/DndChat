@@ -1,6 +1,7 @@
 ﻿@* Views/Chat/Index.cshtml *@
 @using Microsoft.AspNetCore.Authorization
 @{
+    ViewData["Title"] = "Global chat";
     // Is the current HTTP user authenticated?
     var isAuthed = User?.Identity?.IsAuthenticated ?? false;
 
@@ -26,6 +27,12 @@
         </p>
     }
 
+    <div class="my-3">
+        <a class="btn btn-outline-primary btn-sm" asp-controller="Rooms" asp-action="Index">
+            Go to private rooms
+        </a>
+    </div>
+
     @* MAIN CHAT AREA
        - We only show this when the user is authenticated.
        - chat.js will read data-joined and data-username from #root and
@@ -49,7 +56,7 @@
                         type="button"
                         class="btn btn-success"
                         @(isAuthed ? "" : "disabled")>
-                    Chat
+                    Send
                 </button>
             </div>
         </div>

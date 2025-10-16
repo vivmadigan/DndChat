@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] - DndChat</title>
-    <script type="importmap"></script>
+
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/DndChat.styles.css" asp-append-version="true" />
@@ -19,10 +19,13 @@
                         aria-controls="mainNav" aria-expanded="false" aria-label="Toggle navigation">
                     <span class="navbar-toggler-icon"></span>
                 </button>
-                <div class="collapse navbar-collapse">
+                <div class="collapse navbar-collapse" id="mainNav">
                     <ul class="navbar-nav me-auto">
                         <li class="nav-item">
-                            <a class="nav-link" asp-controller="Chat" asp-action="Index">Chat</a>
+                            <a class="nav-link" asp-controller="Chat" asp-action="Index">Global chat</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" asp-controller="Rooms" asp-action="Index">Private rooms</a>
                         </li>
                     </ul>
 
